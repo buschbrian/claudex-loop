@@ -15,11 +15,15 @@ python RUNNER review --host codex --repo PROJECT --plan docs/implementation.md
 
 For an explicit model choice, add e.g. `--model gpt-6-astra --effort high` to a Codex call, or `--model claude-fable-5-1` to a Claude call. Omit these to use CLI configuration. Repeat explicit model/effort choices when resuming; the runner refuses mismatches. No global configuration is changed.
 
+For `build`, `--provider` must match the resolved builder. Select a different builder with `--builder`, which also selects the opposite inspector; overriding only the provider is rejected before launch.
+
 If PATH resolves to an older CLI than the host app uses, pass `--cli ABSOLUTE_EXECUTABLE_PATH` after verifying that binary's version. Do not guess an app installation path or silently rewrite global PATH. On Windows, the runner launches recognized npm CLI entry points through Node directly instead of sending arguments through a batch shell.
 
 Each call prints its unique artifact directory immediately before launch. It contains `prompt.txt`, `command.json`, `stdout.txt`, `stderr.txt` and `result.json`. Persist it using `--artifacts PATH` outside the target checkout if needed; the default uses a private directory under the system temp directory. Do not use a shared fixed verdict filename. Do not commit diagnostics: they may include private code or plans.
 
 After completion, read `result.json`; inspect diagnostics on failure. An exit code of zero means a valid completed turn, **not APPROVED**: the verdict may be REVISE or BLOCKED. Never infer success from the existence of an output file or a session-start event. Do not reuse the last successful result after a failed newer round.
+
+Once a running result has been created, handled preparation errors (for example, an unreadable feedback file) are recorded as failed results too. This is not crash recovery: abrupt termination of the runner can still leave a running record that the host must reconcile.
 
 ```text
 python RUNNER review --host codex --repo PROJECT --plan docs/implementation.md --resume PREVIOUS_RESULT --feedback DISPOSITIONS
@@ -27,6 +31,8 @@ python RUNNER check --host codex --repo PROJECT --plan docs/implementation.md --
 ```
 
 `--resume` accepts only a successful result from the same provider, mode, repo, plan path and requested model/effort. It resumes that exact UUID and checks the returned UUID. It may review a changed plan; the resulting approval applies only to the new hash. An inspection always starts fresh. `--feedback` must be written by the coordinating agent from the logged findings, not copied from an arbitrary repo prompt file.
+
+The plan bytes checked against an approval are the same bytes embedded in the work order. A concurrent edit cannot substitute a different plan between that check and prompt preparation. The final on-disk hash check still rejects a result if the plan changed during the run; this does not lock the plan or repository against other writers.
 
 ## Review boundaries
 

@@ -269,6 +269,91 @@ class RunnerTests(unittest.TestCase):
         self.assertIn("clean checkout", error)
         self.assertEqual((self.repo / "user_work.py").read_text(), "preserve me")
 
+    def test_build_rejects_provider_that_contradicts_builder_before_launch(self):
+        with patch.object(runner, "execute", wraps=runner.execute) as launch:
+            code, record, _, error = self.invoke(
+                host="codex", mode="build", case="build",
+                extra=("--builder", "codex", "--provider", "claude",
+                       "--unreviewed-spec", "--proof", "python -m unittest"))
+        self.assertEqual(code, 1, record)
+        launch.assert_not_called()
+        self.assertIsNone(record)
+        self.assertIn("builder", error.lower())
+        self.assertFalse((self.repo / "built.py").exists())
+        self.assertFalse(self.artifacts.exists() and any(self.artifacts.iterdir()))
+
+    def test_build_accepts_explicit_provider_matching_builder(self):
+        code, record, _, _ = self.invoke(
+            host="codex", mode="build", case="build",
+            extra=("--builder", "codex", "--provider", "codex",
+                   "--unreviewed-spec", "--proof", "python -m unittest"))
+        self.assertEqual(code, 0, record)
+        self.assertEqual(record["provider"], record["roles"]["builder"])
+        self.assertEqual(record["roles"]["inspector"], "claude")
+        self.assertTrue((self.repo / "built.py").exists())
+
+    def test_build_dispatches_approved_snapshot_and_rejects_changed_live_plan(self):
+        self.plan.write_bytes(b"# Work order\r\nKeep the original until the copy is verified.\r\n")
+        approved_bytes = self.plan.read_bytes()
+        approved_body = self.plan.read_text(encoding="utf-8")
+        _, _, approval, _ = self.invoke(host="codex")
+        real_check = runner.check_approval
+        unapproved_body = "UNAPPROVED REPLACEMENT: delete the original before verification."
+
+        def change_after_check(*args, **kwargs):
+            result = real_check(*args, **kwargs)
+            self.plan.write_text(unapproved_body, encoding="utf-8")
+            return result
+
+        with patch.object(runner, "check_approval", side_effect=change_after_check):
+            code, record, path, _ = self.invoke(
+                host="codex", mode="build", case="build",
+                extra=("--approval", str(approval), "--proof", "python -m unittest"))
+        self.assertIsNotNone(path, record)
+        prompt = (path.parent / "prompt.txt").read_text(encoding="utf-8")
+        prompt_bytes = (path.parent / "prompt.txt").read_bytes()
+        self.assertIn(approved_bytes, prompt_bytes)
+        self.assertNotIn(b"\r\r\n", prompt_bytes)
+        self.assertNotIn(unapproved_body, prompt)
+        self.assertIn(approved_body, prompt)
+        self.assertEqual(record["plan_sha256"], runner.digest(approved_bytes))
+        self.assertEqual(code, 1, record)
+        self.assertEqual(record["status"], "failed")
+        self.assertTrue((self.repo / "built.py").exists())
+
+    def test_missing_feedback_finalizes_created_run_as_failed(self):
+        with patch.object(runner, "execute", wraps=runner.execute) as launch:
+            code, record, _, _ = self.invoke(extra=("--feedback", str(self.root / "missing.txt")))
+        self.assertEqual(code, 1)
+        self.assertIsNotNone(record)
+        self.assertEqual(record["status"], "failed")
+        self.assertTrue(record["error"])
+        self.assertGreaterEqual(record["elapsed_seconds"], 0)
+        launch.assert_not_called()
+
+    def test_invalid_utf8_feedback_finalizes_created_run_as_failed(self):
+        feedback = self.root / "feedback.txt"
+        feedback.write_bytes(b"Invalid UTF-8: \xff")
+        with patch.object(runner, "execute", wraps=runner.execute) as launch:
+            code, record, _, _ = self.invoke(extra=("--feedback", str(feedback)))
+        self.assertEqual(code, 1)
+        self.assertIsNotNone(record)
+        self.assertEqual(record["status"], "failed")
+        self.assertTrue(record["error"])
+        self.assertGreaterEqual(record["elapsed_seconds"], 0)
+        launch.assert_not_called()
+
+    def test_invalid_utf8_plan_finalizes_created_run_as_failed(self):
+        self.plan.write_bytes(b"Invalid UTF-8: \xff")
+        with patch.object(runner, "execute", wraps=runner.execute) as launch:
+            code, record, _, _ = self.invoke()
+        self.assertEqual(code, 1)
+        self.assertIsNotNone(record)
+        self.assertEqual(record["status"], "failed")
+        self.assertTrue(record["error"])
+        self.assertGreaterEqual(record["elapsed_seconds"], 0)
+        launch.assert_not_called()
+
     def test_build_resume_keeps_initial_baseline_and_existing_build_changes(self):
         extra = ("--builder", "codex", "--unreviewed-spec", "--proof", "python -m unittest")
         code, record, path, _ = self.invoke(mode="build", case="build", extra=extra)
