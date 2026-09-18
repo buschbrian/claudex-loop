@@ -42,9 +42,9 @@ The fixture checks exercise transport and obvious-defect detection, not comparat
 - Codex's shell sandbox does not constrain external MCP side effects; review existing tool configuration as described in the runtime reference. Claude's adapter instead removes non-reading tools and MCP from the reviewer.
 - Structured-output validation can reject broken transport and inconsistent verdicts, but cannot prove a model's findings or claimed coverage.
 
-## Linux (Omarchy G3) — pending
+## Linux (Omarchy G3) — live pass 2026-09-18
 
-Not yet run. This is the exact, copy-pasteable runbook for the first live pass on the Dell G3 (Arch-based Omarchy). Automated fake-CLI coverage already runs there via GitHub Actions; nothing below has been exercised with real model calls on Linux yet. Follow it once, then fill in the results table at the end and fold any corrections back into this file and `references/runtime.md`.
+Run once on 2026-09-18 (results table at the end; all checks passed, one skipped). Runner invoked from this checkout, Arch-based Omarchy, kernel 7.2. The runbook below is kept as written so the pass can be repeated; one deviation is noted in the table (the Claude reviewer ran on `claude-opus-5`). Fold any further corrections back into this file and `references/runtime.md`.
 
 ### Prerequisites
 
@@ -163,13 +163,15 @@ The Codex Skill Creator and Plugin Creator validators listed under "Automated ch
 
 | Date | Check | Claude Code version | Codex CLI version | Model(s) | Verdict | Latency (elapsed_seconds) | Notes |
 |---|---|---|---|---|---|---|---|
-| | Direction 1 review (Claude host → Codex reviewer) | | | | | | |
-| | Direction 1 `check` (approval) | | | | | | |
-| | Direction 2 review (Codex host → Claude reviewer) | | | | | | |
-| | Direction 2 `check` (approval) | | | | | | |
-| | Delegated build (host claude, builder codex) | | | | | | |
-| | Host proof run (`python -B check.py`) | | | — | | | |
-| | Inspection (host claude, builder codex) | | | | | | |
-| | `python -m unittest discover -s tests -v` | | | — | | | |
-| | `python scripts/validate.py` | | | — | | | |
-| | Codex Skill Creator / Plugin Creator validators | | | — | | | |
+| 2026-09-18 | Direction 1 review (Claude host → Codex reviewer) | 2.1.276 | 0.155.0 | gpt-6-astra, effort high | APPROVED, 0 findings | 29.69 | `observed_models` empty (Codex does not return it) |
+| 2026-09-18 | Direction 1 `check` (approval) | 2.1.276 | 0.155.0 | — | Approval matches the current plan | — | |
+| 2026-09-18 | Direction 2 review (Codex host → Claude reviewer) | 2.1.276 | 0.155.0 | claude-opus-5 requested; observed claude-opus-5 + claude-haiku-4-5 | APPROVED, 2 non-material findings | 16.62 | Opus, not the runbook's claude-fable-5-1: the G3 handoff forbids delegated sessions on the top-tier interactive model. Plumbing check only, so the model is not what is being validated |
+| 2026-09-18 | Direction 2 `check` (approval) | 2.1.276 | 0.155.0 | — | Approval matches the current plan | — | |
+| 2026-09-18 | Delegated build (host claude, builder codex) | 2.1.276 | 0.155.0 | Codex CLI default (build keeps normal config) | exit 0; added `greet.py`; no commit | 33.41 | |
+| 2026-09-18 | Host proof run (`python -B check.py`) | — | — | — | `ok`, exit 0 | — | Run by the host, not taken from the builder's report |
+| 2026-09-18 | Inspection (host claude, builder codex) | 2.1.276 | 0.155.0 | claude-opus-5 | APPROVED, 0 findings | 12.79 | Fresh session |
+| 2026-09-18 | `python -m unittest discover -s tests -v` | — | — | — | 28 tests OK | 3.5 | Python 3.14.7 |
+| 2026-09-18 | `python scripts/validate.py` | — | — | — | Passed | — | `git diff --check` clean |
+| 2026-09-18 | Codex Skill Creator / Plugin Creator validators | — | — | — | **Skipped** | — | No captured shell command exists for them; not run on the G3 |
+| 2026-09-18 | Linux: CLI discovery from a bare environment | 2.1.276 | 0.155.0 | — | **Fails closed, as designed** | 0.0 | With `env -i PATH=/usr/bin:/bin` the runner stops with "codex is not on PATH" before any model call. Both CLIs are mise installs (`~/.local/share/mise/installs/…`), native ELF binaries reachable only through the interactive shell's PATH. `--cli /absolute/path` works from the same bare environment. Any systemd unit, cron job or hook that calls the runner on this machine must pass `--cli` or set PATH itself |
+| 2026-09-18 | Linux: forced timeout leaves no orphan | 2.1.276 | 0.155.0 | gpt-6-astra; claude-opus-5 | **Pass, both providers** | 6.1 / 5.09 | `--timeout 6` and `--timeout 5`: "Run timed out or was interrupted; no approval recorded", and `ps` two seconds later shows no surviving `codex` or `claude` child. `start_new_session=True` + `os.killpg` behaves on Linux as on macOS |
