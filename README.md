@@ -27,7 +27,7 @@ Claudex Loop gives a plan an independent review before implementation, then give
 
 Choose either builder with `builder=claude` or `builder=codex`. The inspector follows the builder choice and always uses the other provider. If the coordinator takes over fixes, those new edits need another independent inspection. With mixed authorship, the log records who wrote and reviewed each part.
 
-Model choices remain configurable. Use **Claude Fable 5.1** and **GPT-6 Astra** when selected and available on your accounts, or retain each CLI's configured model. The host UI selection does not automatically change the other CLI's configuration. Requested and observed model information is recorded separately, and there is no silent model/provider fallback.
+Model choices remain configurable and follow the work's difficulty. Use **GPT-6.1 Sol** or **Claude Sonnet 5.5** for bounded engineering and routine review, **GPT-6 Astra** or **Claude Opus 5.5** for consequential review and ambiguous work, and **GPT-6 Luna** for narrow mechanical Codex tasks. Reserve **Claude Fable 5.1** for explicitly selected, exceptionally demanding work with established access. Select model and supported effort explicitly for each delegated call; Codex reviewers ignore user configuration. Sonnet 5.5 requires Claude Code 2.1.284+. The host UI selection does not automatically change a separate CLI. Requested and observed model information is recorded separately, and there is no silent model/provider fallback.
 
 ## Claudex Route: standalone task routing
 
@@ -39,7 +39,7 @@ claudex-route: Recommend a second opinion on this plan before we build.
 claudex-route: Pick a suitable model and have it diagnose this failing test read-only.
 ```
 
-For example, Luna may suit a focused fixture-generation task, Terra a bounded implementation, and Astra or Fable a difficult review. These are task-fit recommendations, not a fixed ranking; available models, context, verification, and current pricing matter. Staying with your current model is a valid result. Route is a self-contained instruction skill with no Python dependency; a delegated run requires the selected CLI and account access. It does not use the full loop's approval-binding runner.
+For example, Luna may suit a focused fixture-generation task, GPT-6.1 Sol or Sonnet 5.5 a bounded implementation, and Astra or Opus 5.5 a difficult review. These are task-fit recommendations, not a fixed ranking; available models, context, verification, and current pricing matter. Staying with your current model is a valid result. Route is a self-contained instruction skill with no Python dependency; a delegated run requires the selected CLI and account access. It does not use the full loop's approval-binding runner.
 
 Claudex Route runs independently. Use **Claudex Loop** when you want repeated plan review, implementation, and independent inspection.
 
