@@ -13,7 +13,9 @@ python RUNNER review --host claude --repo PROJECT --plan docs/implementation.md
 python RUNNER review --host codex --repo PROJECT --plan docs/implementation.md
 ```
 
-For an explicit model choice, add e.g. `--model gpt-6-astra --effort high` to a Codex call, or `--model claude-fable-5-1` to a Claude call. Omit these to use CLI configuration. Repeat explicit model/effort choices when resuming; the runner refuses mismatches. No global configuration is changed.
+Select model and supported effort for each role before launch. For bounded work, examples are `--model gpt-6.1-sol --effort medium` or `--model claude-sonnet-5-5 --effort medium`; for consequential review, `--model gpt-6-astra --effort high` or `--model claude-opus-5-5 --effort high`. Use the installed personal preferences when available. Repeat the same pair when resuming; the runner refuses mismatches. Codex review/inspect ignores user configuration: omitting the pair uses an unresolved isolated CLI default, not the model in `config.toml`. Other calls may inherit their own CLI configuration. No global configuration is changed.
+
+GPT-6.1 Sol accepts `low`, `medium`, `high`, `xhigh`, and `max`, not `none` or `minimal`. Claude Sonnet 5.5 requires Code 2.1.284+; Opus 5.5 requires 2.1.280+. Opus 5.5 defaults to medium in Claude Code and the API; Sonnet 5.5 defaults to medium in Claude Code and high in the API. Saved settings and explicit role choices can override defaults, so pass effort explicitly. CLI help or a bundled model catalog establishes syntax/listing, not authenticated model access or a successful live turn.
 
 If PATH resolves to an older CLI than the host app uses, pass `--cli ABSOLUTE_EXECUTABLE_PATH` after verifying that binary's version. Do not guess an app installation path or silently rewrite global PATH. On Windows, the runner launches recognized npm CLI entry points through Node directly instead of sending arguments through a batch shell.
 

@@ -28,16 +28,20 @@ The current agent keeps the user's requirements and coordinates the work. A diff
 
 ## Select a practical candidate
 
-Start with models available in the user's environment. The following are dated starting points (September 2026), not a permanent leaderboard:
+Start with models available in the user's environment. The following are dated starting points (2026-10-01), not a permanent leaderboard:
 
 - **GPT-6 Luna** (`gpt-6-luna`): consider for narrow, repetitive tasks with explicit checks, such as fixtures, extraction, documentation updates, or an isolated helper.
-- **GPT-6 Sol** (`gpt-6-sol`): consider for bounded coding or investigation requiring more judgment and context than the Luna task above.
-- **GPT-6 Astra** (`gpt-6-astra`), **Claude Fable 5.1** (`claude-fable-5-1`) and **Claude Opus 5.5** (`claude-opus-5-5`): candidates for ambiguous work, difficult debugging, or a substantial independent review. From Codex, Fable or Opus is a candidate for cross-provider review; from Claude Code, Astra is a candidate.
-- **Claude Sonnet, the GPT-5.6 family, or another available model**: retain as options when their task fit, existing context, account access, or the user's preference favors them. Cross-provider delegation is optional.
+- **GPT-6.1 Sol** (`gpt-6.1-sol`): start at `medium` for bounded builds and investigations; consider `high` for review or interacting code paths that need more verification. This is the newer Sol model.
+- **Claude Sonnet 5.5** (`claude-sonnet-5-5`): consider `low` for mechanical work, `medium` for well-scoped engineering, and `high` for routine review or edge-case diagnosis. Claude Code requires v2.1.284+; its default is `medium`, while the Claude API default is `high`. Saved or explicit effort can override the default.
+- **GPT-6 Astra** (`gpt-6-astra`) and **Claude Opus 5.5** (`claude-opus-5-5`): candidates for consequential review, ambiguous architecture, sensitive integrations or difficult debugging. Consider `high` for these roles. Opus 5.5 requires Claude Code v2.1.280+.
+- **Claude Fable 5.1** (`claude-fable-5-1`): reserve for explicitly chosen, exceptionally demanding reasoning or long-horizon work where Opus is insufficient; establish account and subscription access first.
+- **An explicitly selected or intentionally pinned older model**: preserve it when its task fit, account access or the user's preference favors it. Cross-provider delegation is optional.
+
+When installed, read `claudex-prefs` for the user's role and difficulty ladder. Otherwise use the candidates above as recommendations. Choose a model and supported effort per handoff, preserve explicit choices, and report the requested pair. GPT-6.1 Sol does not support `none` or `minimal`. Higher effort is not an automatic response to every revision, and a failed call does not authorize switching models.
 
 Use local model listings and CLI status/help when accessible without launching a model task. Distinguish listed, authenticated, and proven runnable: none alone establishes the others. If access or the active model is unknown, make the recommendation conditional and explain what needs checking. Do not launch paid comparison calls just to choose a model.
 
-For price-sensitive choices or comparative claims, consult current official [OpenAI model information](https://developers.openai.com/api/docs/models) and [Anthropic model information](https://platform.claude.com/docs/en/about-claude/models/overview). Check [Codex usage guidance](https://learn.chatgpt.com/docs/pricing) when using subscription allowances. API token prices are different from subscription usage; task costs also include context transfer, reasoning, retries, and host verification. Do not call Sol cheaper than Sonnet, claim Luna is universally stronger, or promise savings without relevant evidence. If sources cannot be checked, omit numeric claims and label the cost assumption.
+For price-sensitive choices or comparative claims, consult current official [OpenAI model information](https://developers.openai.com/api/docs/models) and [Anthropic model information](https://platform.claude.com/docs/en/models/overview). Check [Codex usage guidance](https://learn.chatgpt.com/docs/pricing) when using subscription allowances. API token prices are different from subscription usage; task costs also include context transfer, reasoning, retries, and host verification. Do not call Sol cheaper than Sonnet, claim Luna is universally stronger, or promise savings without relevant evidence. If sources cannot be checked, omit numeric claims and label the cost assumption.
 
 ## Return a short routing brief
 
@@ -51,7 +55,7 @@ Offer at most one alternative when it helps a real tradeoff. Do not interview th
 
 ## Execute one handoff when requested
 
-Use the selected provider's CLI from the correct project directory, explicitly selecting the recommended or requested model for that call. Check the actual binary's version and help; consult the relevant official [Codex non-interactive guide](https://learn.chatgpt.com/docs/non-interactive-mode) or [Claude programmatic guide](https://code.claude.com/docs/en/headless) if needed. Avoid changing global defaults, installing software, or switching models silently to make a call succeed.
+Use the selected provider's CLI from the correct project directory, explicitly selecting the recommended or requested model and supported effort for that call. Check the actual binary's version and help; consult the relevant official [Codex non-interactive guide](https://learn.chatgpt.com/docs/non-interactive-mode) or [Claude programmatic guide](https://code.claude.com/docs/en/headless) if needed. Avoid changing global defaults, installing software, or switching models silently to make a call succeed.
 
 Pass a self-contained brief with the goal, relevant requirements and files, constraints, expected output, and verification. For debugging, include failed attempts. For code inspection, identify the comparison baseline and relevant committed, staged, unstaged, and untracked changes. The child does not inherit the conversation. Send prompt text through stdin or a safely handled file; never interpolate arbitrary prompts into shell commands.
 
