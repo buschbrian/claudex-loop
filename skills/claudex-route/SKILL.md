@@ -28,10 +28,10 @@ The current agent keeps the user's requirements and coordinates the work. A diff
 
 ## Select a practical candidate
 
-Start with models available in the user's environment. The following are dated starting points (September 2026), not a permanent leaderboard:
+Start with models available in the user's environment. The following are dated starting points (October 2026), not a permanent leaderboard:
 
 - **GPT-6 Luna** (`gpt-6-luna`): consider for narrow, repetitive tasks with explicit checks, such as fixtures, extraction, documentation updates, or an isolated helper.
-- **GPT-6 Sol** (`gpt-6-sol`) and **Claude Opus 5.5** (`claude-opus-5-5`): consider for bounded coding or investigation requiring more judgment and context than the Luna task above.
+- **GPT-6.1 Sol** (`gpt-6.1-sol`) and **Claude Opus 5.5** (`claude-opus-5-5`): consider for bounded coding or investigation requiring more judgment and context than the Luna task above.
 - **GPT-6 Astra** (`gpt-6-astra`) and **Claude Fable 5.1** (`claude-fable-5-1`): candidates for ambiguous work, difficult debugging, or a substantial independent review. From Codex, Fable is a candidate for cross-provider review; from Claude Code, Astra is a candidate.
 - **Claude Sonnet or another available model**: retain as options when their task fit, existing context, account access, or the user's preference favors them. Cross-provider delegation is optional.
 
