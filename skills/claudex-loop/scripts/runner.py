@@ -86,7 +86,8 @@ def git(repo: Path, *args: str) -> bytes:
 def snapshot(repo: Path, base: str) -> dict:
     """Read tracked, staged, deleted and untracked changes without staging anything."""
     base_id = git(repo, "rev-parse", "--verify", base + "^{commit}").decode().strip()
-    tracked = git(repo, "diff", "--no-ext-diff", "--name-only", "-z", base_id, "--")
+    # --no-renames: a staged rename must list its old path as deleted, not drop it.
+    tracked = git(repo, "diff", "--no-ext-diff", "--no-renames", "--name-only", "-z", base_id, "--")
     untracked = git(repo, "ls-files", "--others", "--exclude-standard", "-z")
     names = sorted(set(os.fsdecode(n) for n in (tracked + untracked).split(b"\0") if n))
     files = []
@@ -271,6 +272,10 @@ def previous_record(path: Path, repo: Path, plan: Path, provider: str, mode: str
 
 def run(args) -> int:
     repo = Path(args.repo).resolve(strict=True)
+    top = subprocess.run(["git", "rev-parse", "--show-toplevel"], cwd=repo, capture_output=True, timeout=30)
+    if top.returncode == 0 and Path(top.stdout.decode().strip()).resolve() != repo:
+        # Snapshot paths are repository-root relative, so a subfolder would be misread.
+        raise RunError("--repo is inside a git repository; pass the repository root instead.")
     plan = Path(args.plan)
     plan = (repo / plan).resolve(strict=True) if not plan.is_absolute() else plan.resolve(strict=True)
     roles = resolve_roles(args.host, builder=args.builder)
