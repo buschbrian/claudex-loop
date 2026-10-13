@@ -66,9 +66,12 @@ def cli_prefix(provider: str, override: str | None = None) -> list[str]:
         raise RunError(f"{provider} is not on PATH. Install and authenticate its CLI first.")
     path = Path(executable)
     if os.name == "nt" and path.suffix.lower() in (".cmd", ".bat", ".ps1"):
-        entry = path.parent / "node_modules" / (
-            "@openai/codex/bin/codex.js" if provider == "codex"
-            else "@anthropic-ai/claude-code/cli.js")
+        package = path.parent / "node_modules" / (
+            "@openai/codex" if provider == "codex" else "@anthropic-ai/claude-code")
+        native = package / "bin" / f"{provider}.exe"
+        if native.is_file():
+            return [str(native)]
+        entry = package / ("bin/codex.js" if provider == "codex" else "cli.js")
         node = shutil.which("node")
         if node and entry.is_file():
             return [node, str(entry)]
