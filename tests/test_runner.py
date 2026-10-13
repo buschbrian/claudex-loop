@@ -53,6 +53,8 @@ if case == 'blocked':
     review.update(verdict='BLOCKED', coverage=[], limitations=['Required schema unavailable.'])
 if case == 'malformed':
     review = {'verdict':'APPROVED'}
+if case == 'arrow':
+    review['summary'] = 'Sound ' + chr(0x2192) + ' ok'
 if 'exec' in sys.argv:
     output = pathlib.Path(sys.argv[sys.argv.index('-o')+1])
     output.write_text('Built; proof passed.' if case == 'build' else json.dumps(review))
@@ -281,6 +283,18 @@ class RunnerTests(unittest.TestCase):
         code, _, _, error = self.invoke(mode="build", case="build", extra=extra+("--resume", str(path)))
         self.assertEqual(code, 1)
         self.assertIn("Checkout changed", error)
+
+    def test_completed_round_exits_0_when_stdout_cannot_encode_the_record(self):
+        # Issue #31: a reply character outside the console code page turned a saved,
+        # completed round into exit 1. U+2192 is outside cp1252 (an em dash is not).
+        out = io.TextIOWrapper(io.BytesIO(), encoding="cp1252")
+        with patch.object(runner, "cli_prefix", return_value=[sys.executable, str(self.cli)]), \
+             patch.dict(os.environ, {"FAKE_CASE": "arrow"}), \
+             contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            code = runner.main(["review", "--host", "codex", "--repo", str(self.repo), "--plan",
+                                str(self.plan), "--artifacts", str(self.artifacts)])
+        record = json.loads(next(self.artifacts.glob("*/result.json")).read_text(encoding="utf-8"))
+        self.assertEqual((code, record["status"]), (0, "completed"))
 
     def test_artifacts_cannot_contaminate_target_checkout(self):
         code, _, _, error = self.invoke(extra=("--artifacts", str(self.repo / "runs")))

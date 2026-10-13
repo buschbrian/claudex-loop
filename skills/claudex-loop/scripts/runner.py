@@ -379,7 +379,8 @@ def run(args) -> int:
         record.update(status="failed", error=str(exc))
     record["elapsed_seconds"] = round(time.time() - record["started_at"], 2)
     save(run_dir / "result.json", record)
-    print(json.dumps(record, ensure_ascii=False, indent=2))
+    # ASCII escapes: a cp1252/cp949 stdout must not turn a completed round into exit 1 (#31).
+    print(json.dumps(record, indent=2))
     return 0 if record["status"] == "completed" else 1
 
 
@@ -404,6 +405,8 @@ def main(argv=None) -> int:
     parser.add_argument("--artifacts", help="Persistent run directory outside the target checkout.")
     parser.add_argument("--timeout", type=int, default=600)
     args = parser.parse_args(argv)
+    if hasattr(sys.stderr, "reconfigure"):
+        sys.stderr.reconfigure(errors="backslashreplace")  # error text may hold any path (#31)
     try:
         if args.timeout < 1:
             raise RunError("Timeout must be positive.")
