@@ -146,8 +146,28 @@ def validate_review(value) -> dict:
     return value
 
 
+def codex_mcp_servers(prefix: list[str], repo: Path) -> list[str]:
+    """Name every enabled user/project MCP server so a review can switch each one off.
+
+    The read-only shell sandbox does not govern MCP side effects (#28). Plugin and app
+    servers are removed by --disable; the rest are listed here. Fails closed.
+    """
+    probe = subprocess.run(prefix + ["mcp", "list", "--json", "--disable", "apps", "--disable", "plugins"],
+                           cwd=repo, stdin=subprocess.DEVNULL, capture_output=True, timeout=60)
+    try:
+        servers = json.loads(probe.stdout) if probe.returncode == 0 else None
+    except ValueError:
+        servers = None
+    if not isinstance(servers, list) or any(not isinstance(s, dict) for s in servers):
+        raise RunError("Could not list Codex MCP servers; refusing to review with unknown tools loaded.")
+    names = [s.get("name") for s in servers if s.get("enabled")]
+    if any(not isinstance(n, str) or not n or not all(c.isalnum() or c in "_-" for c in n) for n in names):
+        raise RunError("Codex listed an MCP server name that cannot be disabled safely.")
+    return names
+
+
 def command(provider: str, mode: str, run_dir: Path, model=None, effort=None,
-            session=None) -> list[str]:
+            session=None, mcp_off=()) -> list[str]:
     review = mode != "build"
     if provider == "codex":
         args = ["exec"] + (["resume", session] if session else [])
@@ -155,10 +175,11 @@ def command(provider: str, mode: str, run_dir: Path, model=None, effort=None,
                  ["-c", 'sandbox_mode="workspace-write"'] if session else
                  ["-s", "read-only" if review else "workspace-write"])
         args += ["-c", 'approval_policy="never"', "--json", "-o", str(run_dir / "reply.txt")]
-        if not review:
-            # Plugins/apps (computer use, browser) and the notify hook act outside the sandbox.
-            args += ["--disable", "apps", "--disable", "plugins", "-c", "notify=[]"]
+        # Plugins/apps (computer use, browser) and the notify hook act outside the sandbox.
+        args += ["--disable", "apps", "--disable", "plugins", "-c", "notify=[]"]
         if review:
+            for name in mcp_off:
+                args += ["-c", f"mcp_servers.{name}.enabled=false"]
             args += ["--skip-git-repo-check", "--output-schema", str(run_dir / "schema.json")]
         if model:
             args += ["-m", model]
@@ -369,8 +390,11 @@ def run(args) -> int:
             raise RunError("CLI version probe failed. Check the resolved executable before retrying.")
         record["cli_version"] = version.stdout.decode("utf-8", errors="replace").strip()
         record["executable"] = prefix
+        mcp_off = (codex_mcp_servers(prefix, repo)
+                   if provider == "codex" and args.mode != "build" else [])
+        record["disabled_mcp_servers"] = mcp_off
         argv = prefix + command(provider, args.mode, run_dir, args.model, args.effort,
-                                previous["session_id"] if previous else None)
+                                previous["session_id"] if previous else None, mcp_off)
         save(run_dir / "command.json", argv)
         print(json.dumps({"provider": provider, "model": args.model or "CLI default (unresolved)",
                           "mode": args.mode, "artifacts": str(run_dir)}), flush=True)

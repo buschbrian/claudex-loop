@@ -25,6 +25,9 @@ import json, os, pathlib, sys, time
 if '--version' in sys.argv:
     print('fake-cli 1.0')
     sys.exit(0)
+if sys.argv[1:3] == ['mcp', 'list']:
+    print(os.environ.get('FAKE_MCP', '[]'))
+    sys.exit(0)
 prompt = sys.stdin.read()
 case = os.environ.get('FAKE_CASE', 'ok')
 if case == 'timeout':
@@ -316,6 +319,26 @@ class RunnerTests(unittest.TestCase):
         code, _, _, error = self.invoke(mode="inspect", extra=("--base", self.base, "--repo", str(self.repo / "sub")))
         self.assertEqual(code, 1)
         self.assertIn("repository root", error)
+
+    def test_codex_reviews_switch_off_plugins_apps_and_every_mcp_server(self):
+        # Issue #28: MCP and plugin tools act outside the read-only shell sandbox.
+        servers = json.dumps([{"name": "github", "enabled": True}, {"name": "off", "enabled": False}])
+        with patch.dict(os.environ, {"FAKE_MCP": servers}):
+            code, record, _, _ = self.invoke()  # Claude host: Codex reviews
+        self.assertEqual(code, 0)
+        argv = json.loads((Path(record["artifacts"]) / "command.json").read_text(encoding="utf-8"))
+        self.assertEqual(record["disabled_mcp_servers"], ["github"])
+        self.assertIn("mcp_servers.github.enabled=false", argv)
+        self.assertNotIn("mcp_servers.off.enabled=false", argv)
+        self.assertEqual(argv.count("--disable"), 2)
+
+    def test_codex_review_fails_closed_when_mcp_listing_is_unusable(self):
+        for listing in ("not json", json.dumps([{"name": "bad name; rm", "enabled": True}])):
+            with patch.dict(os.environ, {"FAKE_MCP": listing}):
+                code, record, _, _ = self.invoke()
+            self.assertEqual((code, record["status"]), (1, "failed"))
+            self.assertIn("MCP server", record["error"])
+            self.assertFalse((Path(record["artifacts"]) / "command.json").exists())
 
     def test_artifacts_cannot_contaminate_target_checkout(self):
         code, _, _, error = self.invoke(extra=("--artifacts", str(self.repo / "runs")))
