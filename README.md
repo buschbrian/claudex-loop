@@ -39,7 +39,7 @@ claudex-route: Recommend a second opinion on this plan before we build.
 claudex-route: Pick a suitable model and have it diagnose this failing test read-only.
 ```
 
-For example, Luna may suit a focused fixture-generation task, Terra a bounded implementation, and Astra or Fable a difficult review. These are task-fit recommendations, not a fixed ranking; available models, context, verification, and current pricing matter. Staying with your current model is a valid result. Route is a self-contained instruction skill with no Python dependency; a delegated run requires the selected CLI and account access. It does not use the full loop's approval-binding runner.
+For example, Luna may suit a focused fixture-generation task, Sol a bounded implementation, and Astra or Fable a difficult review. These are task-fit recommendations, not a fixed ranking; available models, context, verification, and current pricing matter. Staying with your current model is a valid result. Route is a self-contained instruction skill with no Python dependency; a delegated run requires the selected CLI and account access. It does not use the full loop's approval-binding runner.
 
 Claudex Route runs independently. Use **Claudex Loop** when you want repeated plan review, implementation, and independent inspection.
 
