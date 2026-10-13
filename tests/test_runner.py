@@ -305,6 +305,18 @@ class RunnerTests(unittest.TestCase):
         self.assertEqual(codex.count("--disable"), 2)
         self.assertIn("notify=[]", codex)
 
+    def test_staged_rename_lists_old_path_as_deleted(self):
+        self.git("mv", "delete.py", "moved.py")
+        files = {f["path"]: f["kind"] for f in runner.snapshot(self.repo, self.base)["files"]}
+        self.assertEqual((files.get("delete.py"), files.get("moved.py")), ("deleted", "file"))
+
+    def test_git_subdirectory_is_refused_as_repo(self):
+        # Manifest paths are repository-root relative; a subfolder would misread them.
+        (self.repo / "sub").mkdir()
+        code, _, _, error = self.invoke(mode="inspect", extra=("--base", self.base, "--repo", str(self.repo / "sub")))
+        self.assertEqual(code, 1)
+        self.assertIn("repository root", error)
+
     def test_artifacts_cannot_contaminate_target_checkout(self):
         code, _, _, error = self.invoke(extra=("--artifacts", str(self.repo / "runs")))
         self.assertEqual(code, 1)
