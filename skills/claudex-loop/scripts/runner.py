@@ -154,6 +154,9 @@ def command(provider: str, mode: str, run_dir: Path, model=None, effort=None,
                  ["-c", 'sandbox_mode="workspace-write"'] if session else
                  ["-s", "read-only" if review else "workspace-write"])
         args += ["-c", 'approval_policy="never"', "--json", "-o", str(run_dir / "reply.txt")]
+        if not review:
+            # Plugins/apps (computer use, browser) and the notify hook act outside the sandbox.
+            args += ["--disable", "apps", "--disable", "plugins", "-c", "notify=[]"]
         if review:
             args += ["--skip-git-repo-check", "--output-schema", str(run_dir / "schema.json")]
         if model:
@@ -170,7 +173,10 @@ def command(provider: str, mode: str, run_dir: Path, model=None, effort=None,
     else:
         # Keep normal user permissions for commands. A denied proof command is a
         # reported failure; it is never grounds to silently bypass permissions.
-        args += ["--permission-mode", "acceptEdits"]
+        # User hooks fire in the child too (a session logger wrote into the checkout under
+        # build; a TTS hook spoke the builder's reply), and MCP tools act outside the checkout.
+        args += ["--permission-mode", "acceptEdits", "--settings", '{"disableAllHooks":true}',
+                 "--strict-mcp-config", "--mcp-config", '{"mcpServers":{}}']
     if session:
         args += ["--resume", session]
     if model:

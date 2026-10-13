@@ -296,6 +296,15 @@ class RunnerTests(unittest.TestCase):
         record = json.loads(next(self.artifacts.glob("*/result.json")).read_text(encoding="utf-8"))
         self.assertEqual((code, record["status"]), (0, "completed"))
 
+    def test_builders_load_no_user_hooks_or_mcp_tools(self):
+        claude = runner.command("claude", "build", self.root)
+        self.assertEqual(json.loads(claude[claude.index("--settings") + 1]), {"disableAllHooks": True})
+        self.assertEqual(claude[claude.index("--mcp-config") + 1], '{"mcpServers":{}}')
+        self.assertIn("--strict-mcp-config", claude)
+        codex = runner.command("codex", "build", self.root)
+        self.assertEqual(codex.count("--disable"), 2)
+        self.assertIn("notify=[]", codex)
+
     def test_artifacts_cannot_contaminate_target_checkout(self):
         code, _, _, error = self.invoke(extra=("--artifacts", str(self.repo / "runs")))
         self.assertEqual(code, 1)
