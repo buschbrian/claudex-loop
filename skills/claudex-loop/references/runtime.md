@@ -48,7 +48,7 @@ The default timeout is 600 seconds. Use a host tool's nonblocking/background sup
 
 Validation rejects empty/malformed output, duplicate finding IDs, unsupported severity, material findings paired with APPROVED, missing coverage, and incomplete CLI turns. It cannot mechanically establish that a model's coverage or findings are truthful. Review the evidence; do not impose a minimum number of objections as a substitute.
 
-Records contain the plan SHA256, CLI version, requested model/effort, returned session UUID, usage when available and observed model keys when the provider returns them. Unknown model identity remains unknown. There is no silent model fallback or automatic provider switch.
+Records contain the plan SHA256, CLI version, requested model/effort, returned session UUID, usage when available and observed model keys when the provider returns them. For Codex, which reports no model, the runner also records `effective_model`, `effective_effort` and `effective_sandbox` when it can read them from Codex's session rollout under `$CODEX_HOME`. These are the settings the client applied, not a server confirmation, and are omitted when the rollout is missing. Unknown model identity remains unknown. There is no silent model fallback or automatic provider switch.
 
 ## Compatibility
 
