@@ -228,6 +228,32 @@ def execute(argv: list[str], prompt: str, repo: Path, run_dir: Path, timeout: in
             return proc.returncode
 
 
+def codex_effective_settings(session: str) -> dict:
+    """Best effort: the model, effort and sandbox the Codex client applied (#38).
+
+    Read from the last turn_context in Codex's session rollout, an undocumented
+    internal file. These are client-side settings, not a server confirmation.
+    Any missing file or changed format leaves the record unchanged.
+    """
+    try:
+        home = Path(os.environ.get("CODEX_HOME") or Path.home() / ".codex")
+        rollout = max((home / "sessions").glob(f"*/*/*/rollout-*-{session}.jsonl"),
+                      key=lambda f: f.stat().st_mtime, default=None)
+        context = None
+        for line in (rollout.read_text(encoding="utf-8").splitlines() if rollout else []):
+            event = json.loads(line) if line.strip() else {}
+            if isinstance(event, dict) and event.get("type") == "turn_context":
+                context = event.get("payload")
+        if not isinstance(context, dict):
+            return {}
+        sandbox = context.get("sandbox_policy")
+        settings = {"effective_model": context.get("model"), "effective_effort": context.get("effort"),
+                    "effective_sandbox": sandbox.get("type") if isinstance(sandbox, dict) else None}
+        return {k: v for k, v in settings.items() if isinstance(v, str)}
+    except (OSError, ValueError):
+        return {}
+
+
 def parse_result(provider: str, mode: str, run_dir: Path, expected_session=None) -> dict:
     stdout = (run_dir / "stdout.txt").read_text(encoding="utf-8", errors="replace")
     if provider == "codex":
@@ -243,7 +269,8 @@ def parse_result(provider: str, mode: str, run_dir: Path, expected_session=None)
         session = started[0]
         text = (run_dir / "reply.txt").read_text(encoding="utf-8")
         value = json.loads(text) if mode != "build" else text
-        metadata = {"usage": completed[0].get("usage"), "observed_models": []}
+        metadata = {"usage": completed[0].get("usage"), "observed_models": [],
+                    **codex_effective_settings(session)}
     else:
         envelope = json.loads(stdout)
         # Some CLI versions emit an array of init/assistant/result events for JSON.

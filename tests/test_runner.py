@@ -425,6 +425,28 @@ class RunnerTests(unittest.TestCase):
             self.assertIn("MCP server", record["error"])
             self.assertFalse((Path(record["artifacts"]) / "command.json").exists())
 
+    def test_codex_records_effective_settings_from_its_rollout(self):
+        # Issue #38: the effective model/effort/sandbox live in Codex's session rollout.
+        home = self.root / "codex-home"
+        day = home / "sessions" / "2026" / "10" / "14"
+        day.mkdir(parents=True)
+        context = {"type": "turn_context", "payload": {"model": "gpt-test", "effort": "low",
+                                                       "sandbox_policy": {"type": "read-only"}}}
+        (day / f"rollout-2026-10-14T00-00-00-{SESSION}.jsonl").write_text(
+            "\n".join([json.dumps({"type": "session_meta"}), json.dumps(context), ""]), encoding="utf-8")
+        with patch.dict(os.environ, {"CODEX_HOME": str(home)}):
+            code, record, _, _ = self.invoke()
+        self.assertEqual(code, 0)
+        self.assertEqual((record["effective_model"], record["effective_effort"], record["effective_sandbox"]),
+                         ("gpt-test", "low", "read-only"))
+        self.assertEqual(record["observed_models"], [])
+
+    def test_codex_run_without_rollout_still_completes(self):
+        with patch.dict(os.environ, {"CODEX_HOME": str(self.root / "missing")}):
+            code, record, _, _ = self.invoke()
+        self.assertEqual(code, 0)
+        self.assertNotIn("effective_model", record)
+
     def test_artifacts_cannot_contaminate_target_checkout(self):
         code, _, _, error = self.invoke(extra=("--artifacts", str(self.repo / "runs")))
         self.assertEqual(code, 1)
